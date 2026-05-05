@@ -1,0 +1,17 @@
+{
+  "name": "locally/backend",
+  "description": "Locally streetwear API (PHP)",
+  "type": "project",
+  "license": "proprietary",
+  "require": {
+    "php": ">=8.2"
+  },
+  "autoload": {
+    "psr-4": {
+      "Locally\\": "src/"
+    }
+  },
+  "config": {
+    "sort-packages": true
+  }
+}

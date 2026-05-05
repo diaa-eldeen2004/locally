@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+backend/vendor/
+
+# Environment
+.env
+.env.local
+backend/.env
+frontend/.env
+frontend/.env.local
+
+# Build
+frontend/dist/
+
+# Logs & OS
+*.log
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# PHP
+*.cache

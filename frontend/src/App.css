@@ -1,0 +1,228 @@
+.shell {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  text-align: center;
+  gap: 0.75rem;
+}
+
+.eyebrow {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-weight: 600;
+  color: var(--mint-deep);
+}
+
+@media (prefers-color-scheme: dark) {
+  .eyebrow {
+    color: var(--mint);
+  }
+}
+
+.lede {
+  max-width: 32rem;
+  margin-bottom: 0.5rem;
+}
+
+.lede code {
+  font-size: 0.85em;
+  padding: 0.12em 0.35em;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+}
+
+.cards {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  width: 100%;
+  max-width: 36rem;
+  align-items: stretch;
+}
+
+.card {
+  padding: 1rem 1.25rem;
+  border-radius: 999px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-align: left;
+}
+
+.card--muted {
+  color: var(--text-muted);
+}
+
+.card--muted .dot--muted {
+  background: var(--text-muted);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--text-muted) 22%, transparent);
+}
+
+.dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--mint);
+  flex-shrink: 0;
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--mint) 28%, transparent);
+}
+
+.panel {
+  margin-top: 1.5rem;
+  width: 100%;
+  max-width: 52rem;
+  padding: 1.25rem 1.35rem 1.1rem;
+  border-radius: 18px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  text-align: left;
+}
+
+.panel__title {
+  margin: 0 0 0.35rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.panel__hint {
+  margin: 0 0 1rem;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.panel__hint code {
+  font-size: 0.85em;
+  padding: 0.1em 0.3em;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+}
+
+.panel__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 720px) {
+  .panel__row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 1rem;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 70%, var(--surface-elevated));
+}
+
+.form__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.field input {
+  font: inherit;
+  font-size: 0.95rem;
+  text-transform: none;
+  letter-spacing: normal;
+  padding: 0.55rem 0.65rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-elevated);
+  color: var(--text);
+}
+
+.field input:focus-visible {
+  outline: 2px solid var(--mint);
+  outline-offset: 2px;
+}
+
+.btn {
+  margin-top: 0.25rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  background: var(--mint);
+  color: #0d1f1a;
+}
+
+.btn--secondary {
+  background: color-mix(in srgb, var(--mint) 35%, var(--surface-elevated));
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--mint-deep);
+  outline-offset: 2px;
+}
+
+.panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.panel__msg {
+  margin: 0.75rem 0 0;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.panel__pre {
+  margin: 0.75rem 0 0;
+  padding: 0.75rem;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--text) 6%, var(--surface-elevated));
+  border: 1px solid var(--border);
+  font-size: 0.78rem;
+  overflow: auto;
+  max-height: 12rem;
+}
+
+.panel__foot {
+  margin: 0.75rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.panel__foot code {
+  font-size: 0.85em;
+}
