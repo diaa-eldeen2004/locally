@@ -42,8 +42,8 @@ export default function DevPage() {
   const [csrfPreview, setCsrfPreview] = useState<string>('—')
   const [authMsg, setAuthMsg] = useState<string>('')
 
-  const [loginEmail, setLoginEmail] = useState('admin@locally.test')
-  const [loginPassword, setLoginPassword] = useState('password')
+  const [loginEmail, setLoginEmail] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
   const [regEmail, setRegEmail] = useState('')
   const [regPassword, setRegPassword] = useState('')
   const [regFirst, setRegFirst] = useState('')
@@ -59,6 +59,12 @@ export default function DevPage() {
   }, [])
 
   useEffect(() => {
+    if (me?.role !== 'admin') {
+      setApiLine('Admin-only diagnostics are hidden.')
+      setDbLine('')
+      setCsrfPreview('—')
+      return
+    }
     void (async () => {
       const health = await apiFetch<HealthData>('/health', { method: 'GET' })
       if (health.ok && health.data?.service) {
@@ -74,9 +80,17 @@ export default function DevPage() {
       setApiLine('API offline — start PHP on :8080')
       setDbLine('')
     })
-  }, [refreshCsrfPreview])
+  }, [me?.role, refreshCsrfPreview])
 
   const onLogin = async (e: FormEvent) => {
+    if (!/\S+@\S+\.\S+/.test(loginEmail.trim())) {
+      setAuthMsg('Enter a valid email.')
+      return
+    }
+    if (loginPassword.trim() === '') {
+      setAuthMsg('Password is required.')
+      return
+    }
     e.preventDefault()
     setAuthMsg('')
     invalidateCsrf()
@@ -92,6 +106,18 @@ export default function DevPage() {
   }
 
   const onRegister = async (e: FormEvent) => {
+    if (!/\S+@\S+\.\S+/.test(regEmail.trim())) {
+      setAuthMsg('Enter a valid email.')
+      return
+    }
+    if (regPassword.length < 8) {
+      setAuthMsg('Password must be at least 8 characters.')
+      return
+    }
+    if (regFirst.trim() === '') {
+      setAuthMsg('First name is required.')
+      return
+    }
     e.preventDefault()
     setAuthMsg('')
     invalidateCsrf()
@@ -142,24 +168,30 @@ export default function DevPage() {
         <p className="muted">Auth, CSRF, and health checks</p>
       </header>
 
-      <div className="cards" style={{ marginBottom: '1rem' }}>
-        <div className="card" role="status">
-          <span className="dot" aria-hidden />
-          {apiLine}
-        </div>
-        {dbLine ? (
-          <div className="card card--muted" role="status">
-            <span className="dot dot--muted" aria-hidden />
-            {dbLine}
+      {me?.role === 'admin' ? (
+        <div className="cards" style={{ marginBottom: '1rem' }}>
+          <div className="card" role="status">
+            <span className="dot" aria-hidden />
+            {apiLine}
           </div>
-        ) : null}
-      </div>
+          {dbLine ? (
+            <div className="card card--muted" role="status">
+              <span className="dot dot--muted" aria-hidden />
+              {dbLine}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <section className="panel">
         <h2 className="panel__title">Auth</h2>
-        <p className="panel__hint">
-          POST requests require <code>X-CSRF-Token</code> from <code>GET /api/csrf</code>.
-        </p>
+        {me?.role === 'admin' ? (
+          <p className="panel__hint">
+            POST requests require <code>X-CSRF-Token</code> from <code>GET /api/csrf</code>.
+          </p>
+        ) : (
+          <p className="panel__hint">Sign in or create an account.</p>
+        )}
 
         <div className="panel__row">
           <form className="form" onSubmit={onLogin}>
@@ -220,22 +252,30 @@ export default function DevPage() {
         </div>
 
         <div className="panel__actions">
-          <button type="button" className="btn btn--ghost" onClick={() => void refresh()}>
-            Refresh /me
-          </button>
-          <button type="button" className="btn btn--ghost" onClick={() => void onLogout()}>
-            Logout
-          </button>
-          <button type="button" className="btn btn--ghost" onClick={() => void onAdminPing()}>
-            Admin ping
-          </button>
+          {me?.role === 'admin' ? (
+            <>
+              <button type="button" className="btn btn--ghost" onClick={() => void refresh()}>
+                Refresh /me
+              </button>
+              <button type="button" className="btn btn--ghost" onClick={() => void onLogout()}>
+                Logout
+              </button>
+              <button type="button" className="btn btn--ghost" onClick={() => void onAdminPing()}>
+                Admin ping
+              </button>
+            </>
+          ) : null}
         </div>
 
         {authMsg ? <p className="panel__msg">{authMsg}</p> : null}
-        {!authLoading ? <pre className="panel__pre">{JSON.stringify({ user: me }, null, 2)}</pre> : <p className="muted">Loading session…</p>}
-        <p className="panel__foot">
-          CSRF token (truncated): <code>{csrfPreview}</code>
-        </p>
+        {me?.role === 'admin' ? (
+          <>
+            {!authLoading ? <pre className="panel__pre">{JSON.stringify({ user: me }, null, 2)}</pre> : <p className="muted">Loading session…</p>}
+            <p className="panel__foot">
+              CSRF token (truncated): <code>{csrfPreview}</code>
+            </p>
+          </>
+        ) : null}
       </section>
     </div>
   )

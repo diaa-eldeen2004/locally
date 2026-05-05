@@ -37,8 +37,32 @@ final class OrderController
 
         $ship = $body['shipping_address'] ?? null;
         $shipping = is_array($ship) ? $ship : null;
-
+        $paymentType = isset($body['payment_type']) && is_string($body['payment_type'])
+            ? strtolower(trim($body['payment_type']))
+            : 'cash';
+        $visa = isset($body['visa']) && is_array($body['visa']) ? $body['visa'] : null;
         $note = is_string($body['customer_note'] ?? null) ? $body['customer_note'] : null;
+
+        if ($shipping === null) {
+            return Response::jsonError(['code' => 'VALIDATION_ERROR', 'message' => 'shipping_address is required.'], 422);
+        }
+        $validationError = $this->validateCheckoutInput($shipping, $paymentType, $visa);
+        if ($validationError !== null) {
+            return Response::jsonError(['code' => 'VALIDATION_ERROR', 'message' => $validationError], 422);
+        }
+
+        // Persist only checkout-safe data (never store full card number/cvv).
+        $shipping['payment_type'] = $paymentType;
+        if ($paymentType === 'visa' && $visa !== null) {
+            $digits = preg_replace('/\D+/', '', (string) ($visa['card_number'] ?? ''));
+            $shipping['payment'] = [
+                'brand' => 'visa',
+                'card_last4' => substr($digits, -4),
+                'cardholder_name' => (string) ($visa['cardholder_name'] ?? ''),
+                'exp_month' => (int) ($visa['exp_month'] ?? 0),
+                'exp_year' => (int) ($visa['exp_year'] ?? 0),
+            ];
+        }
 
         try {
             $order = $this->orders->createFromCart(Access::userId() ?? 0, $shipping, $note);
@@ -55,6 +79,95 @@ final class OrderController
                 500
             );
         }
+    }
+
+    /**
+     * @param array<string, mixed> $shipping
+     * @param array<string, mixed>|null $visa
+     */
+    private function validateCheckoutInput(array $shipping, string $paymentType, ?array $visa): ?string
+    {
+        $requiredText = [
+            'phone_number' => 24,
+            'recovery_number' => 24,
+            'address_line_1' => 160,
+            'city' => 80,
+            'state' => 80,
+            'postal_code' => 24,
+            'country' => 80,
+        ];
+        foreach ($requiredText as $key => $maxLen) {
+            $v = isset($shipping[$key]) && is_string($shipping[$key]) ? trim($shipping[$key]) : '';
+            if ($v === '') {
+                return $key . ' is required.';
+            }
+            if (strlen($v) > $maxLen) {
+                return $key . ' is too long.';
+            }
+        }
+
+        if (isset($shipping['address_line_2']) && is_string($shipping['address_line_2']) && strlen(trim($shipping['address_line_2'])) > 160) {
+            return 'address_line_2 is too long.';
+        }
+
+        if (!in_array($paymentType, ['cash', 'visa'], true)) {
+            return 'payment_type must be cash or visa.';
+        }
+        if ($paymentType === 'cash') {
+            return null;
+        }
+
+        if ($visa === null) {
+            return 'visa details are required when payment_type is visa.';
+        }
+        $cardholder = isset($visa['cardholder_name']) && is_string($visa['cardholder_name']) ? trim($visa['cardholder_name']) : '';
+        $cardNumberRaw = isset($visa['card_number']) && is_string($visa['card_number']) ? $visa['card_number'] : '';
+        $cardDigits = preg_replace('/\D+/', '', $cardNumberRaw);
+        $expMonth = isset($visa['exp_month']) ? (int) $visa['exp_month'] : 0;
+        $expYear = isset($visa['exp_year']) ? (int) $visa['exp_year'] : 0;
+        $cvv = isset($visa['cvv']) && is_string($visa['cvv']) ? trim($visa['cvv']) : '';
+
+        if ($cardholder === '' || strlen($cardholder) > 120) {
+            return 'cardholder_name is required.';
+        }
+        if ($cardDigits === null || strlen($cardDigits) < 13 || strlen($cardDigits) > 19 || !$this->passesLuhn($cardDigits)) {
+            return 'card_number is invalid.';
+        }
+        if ($expMonth < 1 || $expMonth > 12) {
+            return 'exp_month is invalid.';
+        }
+        if ($expYear < 2024 || $expYear > 2100) {
+            return 'exp_year is invalid.';
+        }
+        $nowY = (int) gmdate('Y');
+        $nowM = (int) gmdate('n');
+        if ($expYear < $nowY || ($expYear === $nowY && $expMonth < $nowM)) {
+            return 'Card is expired.';
+        }
+        if (!preg_match('/^\d{3,4}$/', $cvv)) {
+            return 'cvv is invalid.';
+        }
+
+        return null;
+    }
+
+    private function passesLuhn(string $digits): bool
+    {
+        $sum = 0;
+        $alt = false;
+        for ($i = strlen($digits) - 1; $i >= 0; $i--) {
+            $n = (int) $digits[$i];
+            if ($alt) {
+                $n *= 2;
+                if ($n > 9) {
+                    $n -= 9;
+                }
+            }
+            $sum += $n;
+            $alt = !$alt;
+        }
+
+        return ($sum % 10) === 0;
     }
 
     public function list(Request $request): Response

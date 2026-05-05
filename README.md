@@ -25,6 +25,12 @@ Import schema (from repo root):
 mysql -u root -p locally < database/schema.sql
 ```
 
+For existing databases, run incremental migrations:
+
+```powershell
+mysql -u root -p locally < database/migrations/20260505_orders_checkout_payment.sql
+```
+
 Optional demo data (includes **admin@locally.test** and **confirmer@locally.test**, both **password** — change in production):
 
 ```powershell

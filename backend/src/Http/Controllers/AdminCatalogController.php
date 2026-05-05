@@ -407,31 +407,56 @@ final class AdminCatalogController
                 return Response::jsonError(['code' => 'UPLOAD_FAILED', 'message' => 'Invalid upload.'], 400);
             }
 
-            $finfo = new \finfo(FILEINFO_MIME_TYPE);
-            $mime = $finfo->file($tmp);
+            $mime = null;
+            if (class_exists('\finfo')) {
+                $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                $detected = $finfo->file($tmp);
+                if (is_string($detected) && $detected !== '') {
+                    $mime = $detected;
+                }
+            }
+            if (($mime === null || $mime === '') && function_exists('mime_content_type')) {
+                $detected = @mime_content_type($tmp);
+                if (is_string($detected) && $detected !== '') {
+                    $mime = $detected;
+                }
+            }
+            if ($mime === null || $mime === '') {
+                $fallbackMeta = @getimagesize($tmp);
+                if (is_array($fallbackMeta) && isset($fallbackMeta['mime']) && is_string($fallbackMeta['mime'])) {
+                    $mime = $fallbackMeta['mime'];
+                }
+            }
             $extMap = [
                 'image/jpeg' => 'jpg',
                 'image/png' => 'png',
                 'image/webp' => 'webp',
+                'image/gif' => 'gif',
+                'image/bmp' => 'bmp',
+                'image/x-ms-bmp' => 'bmp',
+                'image/avif' => 'avif',
+                'image/svg+xml' => 'svg',
             ];
             if ($mime === false || !isset($extMap[$mime])) {
                 return Response::jsonError(
-                    ['code' => 'VALIDATION_ERROR', 'message' => 'Only JPEG, PNG, or WebP images are allowed.'],
+                    ['code' => 'VALIDATION_ERROR', 'message' => 'Unsupported image type. Allowed: JPEG, PNG, WebP, GIF, BMP, AVIF, SVG.'],
                     422
                 );
             }
             $ext = $extMap[$mime];
-            $imgMeta = @getimagesize($tmp);
-            if (!is_array($imgMeta)) {
-                return Response::jsonError(['code' => 'VALIDATION_ERROR', 'message' => 'Uploaded file is not a valid image.'], 422);
-            }
-            $w = isset($imgMeta[0]) ? (int) $imgMeta[0] : 0;
-            $h = isset($imgMeta[1]) ? (int) $imgMeta[1] : 0;
-            if ($w <= 0 || $h <= 0 || $w > 5000 || $h > 5000) {
-                return Response::jsonError(
-                    ['code' => 'VALIDATION_ERROR', 'message' => 'Image dimensions must be between 1x1 and 5000x5000.'],
-                    422
-                );
+            if ($mime !== 'image/svg+xml') {
+                $imgMeta = @getimagesize($tmp);
+                if (!is_array($imgMeta)) {
+                    return Response::jsonError(['code' => 'VALIDATION_ERROR', 'message' => 'Uploaded file is not a valid image.'], 422);
+                }
+                $w = isset($imgMeta[0]) ? (int) $imgMeta[0] : 0;
+                $h = isset($imgMeta[1]) ? (int) $imgMeta[1] : 0;
+                if ($w <= 0 || $h <= 0 || $w > 7000 || $h > 7000) {
+                    return Response::jsonError(
+                        ['code' => 'VALIDATION_ERROR', 'message' => 'Image dimensions must be between 1x1 and 7000x7000.'],
+                        422
+                    );
+                }
             }
 
             $publicRoot = dirname(__DIR__, 3) . '/public';

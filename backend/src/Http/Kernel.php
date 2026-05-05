@@ -154,7 +154,7 @@ final class Kernel
             $router->get('/api/admin/homepage/sections', fn (Request $r): Response => $adminCatalog->homepageSectionsList());
             $router->put('/api/admin/homepage/sections/reorder', fn (Request $r): Response => $adminCatalog->homepageReorder($r));
 
-            $router->get('/api/catalog/categories', fn (Request $r): Response => $catalog->categories());
+            $router->get('/api/catalog/categories', fn (Request $r): Response => $catalog->categories($r));
             $router->get('/api/catalog/products', fn (Request $r): Response => $catalog->products($r));
             $router->getSlug('/api/catalog/products', fn (Request $r, string $slug): Response => $catalog->product($r, $slug));
             $router->get('/api/catalog/homepage', fn (Request $r): Response => $catalog->homepage($r));
@@ -162,7 +162,7 @@ final class Kernel
             $router->post('/api/reviews', fn (Request $r): Response => $reviewCtl->create($r));
             $router->post('/api/analytics/track', fn (Request $r): Response => $analyticsCtl->track($r));
 
-            $router->get('/api/cart', fn (Request $r): Response => $cart->get());
+            $router->get('/api/cart', fn (Request $r): Response => $cart->get($r));
             $router->post('/api/cart/items', fn (Request $r): Response => $cart->upsertItem($r));
             $router->delete('/api/cart/items', fn (Request $r): Response => $cart->deleteItem($r));
 

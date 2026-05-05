@@ -31,6 +31,21 @@ export default function CartPage() {
   const toast = useToast()
   const [err, setErr] = useState('')
   const [msg, setMsg] = useState('')
+  const [phone, setPhone] = useState('')
+  const [recoveryPhone, setRecoveryPhone] = useState('')
+  const [address1, setAddress1] = useState('')
+  const [address2, setAddress2] = useState('')
+  const [city, setCity] = useState('')
+  const [state, setState] = useState('')
+  const [postalCode, setPostalCode] = useState('')
+  const [country, setCountry] = useState('')
+  const [paymentType, setPaymentType] = useState<'cash' | 'visa'>('cash')
+  const visaDraft = readVisaDraft()
+  const [visaName, setVisaName] = useState(visaDraft.cardholder_name)
+  const [visaNumber, setVisaNumber] = useState(visaDraft.card_number)
+  const [visaExpMonth, setVisaExpMonth] = useState(visaDraft.exp_month)
+  const [visaExpYear, setVisaExpYear] = useState(visaDraft.exp_year)
+  const [visaCvv, setVisaCvv] = useState(visaDraft.cvv)
 
   const {
     data: cart,
@@ -88,9 +103,62 @@ export default function CartPage() {
       setMsg('')
     },
     mutationFn: async () => {
+      const required = [
+        ['Phone number', phone],
+        ['Recovery number', recoveryPhone],
+        ['Address line 1', address1],
+        ['City', city],
+        ['State', state],
+        ['Postal code', postalCode],
+        ['Country', country],
+      ] as const
+      for (const [label, value] of required) {
+        if (value.trim() === '') {
+          throw new Error(`${label} is required.`)
+        }
+      }
+      if (paymentType === 'visa') {
+        const digits = visaNumber.replace(/\D+/g, '')
+        if (visaName.trim() === '') {
+          throw new Error('Cardholder name is required.')
+        }
+        if (digits.length < 13 || digits.length > 19 || !passesLuhn(digits)) {
+          throw new Error('Card number is invalid.')
+        }
+        const m = Number(visaExpMonth)
+        const y = Number(visaExpYear)
+        const now = new Date()
+        if (m < 1 || m > 12 || y < now.getFullYear() || (y === now.getFullYear() && m < now.getMonth() + 1)) {
+          throw new Error('Card expiry is invalid.')
+        }
+        if (!/^\d{3,4}$/.test(visaCvv.trim())) {
+          throw new Error('CVV is invalid.')
+        }
+      }
+
       invalidateCsrf()
       const res = await apiPostCsrf<{ order: { id: number } }>('/orders', {
-        shipping_address: null,
+        shipping_address: {
+          phone_number: phone.trim(),
+          recovery_number: recoveryPhone.trim(),
+          address_line_1: address1.trim(),
+          address_line_2: address2.trim(),
+          city: city.trim(),
+          state: state.trim(),
+          postal_code: postalCode.trim(),
+          country: country.trim(),
+        },
+        payment_type: paymentType,
+        visa:
+          paymentType === 'visa'
+            ? {
+                cardholder_name: visaName.trim(),
+                card_number: visaNumber,
+                exp_month: Number(visaExpMonth),
+                exp_year: Number(visaExpYear),
+                cvv: visaCvv.trim(),
+              }
+            : null,
         customer_note: null,
       })
       if (res.ok && res.data?.order?.id) {
@@ -190,6 +258,80 @@ export default function CartPage() {
             </div>
             <div>${cart.subtotal.toFixed(2)}</div>
           </div>
+          <section className="panel" style={{ marginTop: '1rem' }}>
+            <h2 className="panel__title">Checkout details</h2>
+            <div className="panel__row">
+              <label className="field">
+                <span>Phone number</span>
+                <input value={phone} onChange={(e) => setPhone(e.target.value)} required />
+              </label>
+              <label className="field">
+                <span>Recovery number</span>
+                <input value={recoveryPhone} onChange={(e) => setRecoveryPhone(e.target.value)} required />
+              </label>
+              <label className="field">
+                <span>Address line 1</span>
+                <input value={address1} onChange={(e) => setAddress1(e.target.value)} required />
+              </label>
+              <label className="field">
+                <span>Address line 2</span>
+                <input value={address2} onChange={(e) => setAddress2(e.target.value)} />
+              </label>
+              <label className="field">
+                <span>City</span>
+                <input value={city} onChange={(e) => setCity(e.target.value)} required />
+              </label>
+              <label className="field">
+                <span>State</span>
+                <input value={state} onChange={(e) => setState(e.target.value)} required />
+              </label>
+              <label className="field">
+                <span>Postal code</span>
+                <input value={postalCode} onChange={(e) => setPostalCode(e.target.value)} required />
+              </label>
+              <label className="field">
+                <span>Country</span>
+                <input value={country} onChange={(e) => setCountry(e.target.value)} required />
+              </label>
+              <label className="field">
+                <span>Payment type</span>
+                <select value={paymentType} onChange={(e) => setPaymentType(e.target.value as 'cash' | 'visa')}>
+                  <option value="cash">Cash</option>
+                  <option value="visa">Visa</option>
+                </select>
+              </label>
+            </div>
+            {paymentType === 'visa' ? (
+              <div className="panel__row" style={{ marginTop: '0.75rem' }}>
+                <label className="field">
+                  <span>Cardholder name</span>
+                  <input value={visaName} onChange={(e) => setVisaName(e.target.value)} required />
+                </label>
+                <label className="field">
+                  <span>Card number</span>
+                  <input value={visaNumber} onChange={(e) => setVisaNumber(e.target.value)} inputMode="numeric" required />
+                </label>
+                <label className="field">
+                  <span>Exp month</span>
+                  <input value={visaExpMonth} onChange={(e) => setVisaExpMonth(e.target.value)} inputMode="numeric" required />
+                </label>
+                <label className="field">
+                  <span>Exp year</span>
+                  <input value={visaExpYear} onChange={(e) => setVisaExpYear(e.target.value)} inputMode="numeric" required />
+                </label>
+                <label className="field">
+                  <span>CVV</span>
+                  <input value={visaCvv} onChange={(e) => setVisaCvv(e.target.value)} inputMode="numeric" required />
+                </label>
+                <div className="field">
+                  <span>Visa page</span>
+                  <Link className="btn btn--ghost" to="/checkout/visa">
+                    Open Visa validation page
+                  </Link>
+                </div>
+              </div>
+            ) : null}
+          </section>
           <div className="pager" style={{ justifyContent: 'flex-start' }}>
             <button
               type="button"
@@ -210,4 +352,48 @@ export default function CartPage() {
       )}
     </div>
   )
+}
+
+function passesLuhn(digits: string): boolean {
+  let sum = 0
+  let alt = false
+  for (let i = digits.length - 1; i >= 0; i -= 1) {
+    let n = Number(digits[i])
+    if (alt) {
+      n *= 2
+      if (n > 9) n -= 9
+    }
+    sum += n
+    alt = !alt
+  }
+  return sum % 10 === 0
+}
+
+function readVisaDraft(): {
+  cardholder_name: string
+  card_number: string
+  exp_month: string
+  exp_year: string
+  cvv: string
+} {
+  try {
+    const raw = localStorage.getItem('checkoutVisaDraft')
+    if (!raw) return { cardholder_name: '', card_number: '', exp_month: '', exp_year: '', cvv: '' }
+    const parsed = JSON.parse(raw) as Partial<{
+      cardholder_name: string
+      card_number: string
+      exp_month: string
+      exp_year: string
+      cvv: string
+    }>
+    return {
+      cardholder_name: parsed.cardholder_name ?? '',
+      card_number: parsed.card_number ?? '',
+      exp_month: parsed.exp_month ?? '',
+      exp_year: parsed.exp_year ?? '',
+      cvv: parsed.cvv ?? '',
+    }
+  } catch {
+    return { cardholder_name: '', card_number: '', exp_month: '', exp_year: '', cvv: '' }
+  }
 }

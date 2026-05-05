@@ -96,6 +96,39 @@ function numActive(v: number | string | boolean): boolean {
   return Number(v) === 1
 }
 
+function slugify(input: string): string {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+function buildSlugChoices(name: string, existing: string[], current?: string): string[] {
+  const base = slugify(name)
+  if (base === '') {
+    return current && current.trim() !== '' ? [current.trim()] : []
+  }
+
+  const taken = new Set(existing.map((s) => s.trim()).filter(Boolean))
+  const out: string[] = []
+  for (let i = 0; i < 12; i += 1) {
+    const candidate = i === 0 ? base : `${base}-${i + 1}`
+    if (!taken.has(candidate) || candidate === current) {
+      out.push(candidate)
+    }
+    if (out.length >= 6) {
+      break
+    }
+  }
+
+  if (current && current.trim() !== '' && !out.includes(current.trim())) {
+    out.unshift(current.trim())
+  }
+
+  return out
+}
+
 export default function AdminPage() {
   const { user, loading } = useAuth()
   const qc = useQueryClient()
@@ -180,7 +213,7 @@ export default function AdminPage() {
 
   const catQ = useQuery({
     queryKey: qk.adminCategories,
-    enabled: user?.role === 'admin' && tab === 'categories',
+    enabled: user?.role === 'admin' && (tab === 'categories' || tab === 'products'),
     queryFn: async () => {
       const res = await apiFetch<{ items: AdminCategory[] }>('/admin/categories', { method: 'GET' })
       if (!res.ok || !res.data) {
@@ -404,6 +437,9 @@ export default function AdminPage() {
 
   const serverHpIds = hpQ.data?.map((s) => s.id) ?? []
   const hpWorkingIds = hpEditedIds !== null ? hpEditedIds : serverHpIds
+  const categoryOptions = catQ.data ?? []
+  const existingProductSlugs = (prodQry.data?.items ?? []).map((p) => p.slug)
+  const newProductSlugChoices = buildSlugChoices(newProd.name, existingProductSlugs, newProd.slug)
 
   return (
     <div className="page">
@@ -686,13 +722,18 @@ export default function AdminPage() {
           >
             <label className="filters__field">
               <span>Category id</span>
-              <input
-                type="number"
-                min={1}
+              <select
                 value={newProd.category_id}
                 onChange={(e) => setNewProd((p) => ({ ...p, category_id: e.target.value }))}
                 required
-              />
+              >
+                <option value="">Select category…</option>
+                {categoryOptions.map((c) => (
+                  <option key={c.id} value={String(c.id)}>
+                    {c.id} - {c.name} ({c.slug})
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="filters__field">
               <span>Name</span>
@@ -700,7 +741,14 @@ export default function AdminPage() {
             </label>
             <label className="filters__field">
               <span>Slug</span>
-              <input value={newProd.slug} onChange={(e) => setNewProd((p) => ({ ...p, slug: e.target.value }))} required />
+              <select value={newProd.slug} onChange={(e) => setNewProd((p) => ({ ...p, slug: e.target.value }))} required>
+                <option value="">Select slug…</option>
+                {newProductSlugChoices.map((choice) => (
+                  <option key={choice} value={choice}>
+                    {choice}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="filters__field">
               <span>Price</span>
@@ -781,6 +829,8 @@ export default function AdminPage() {
                   <ProductRow
                     key={`${p.id}-${prodQry.dataUpdatedAt}`}
                     product={p}
+                    categories={categoryOptions}
+                    existingSlugs={existingProductSlugs}
                     saving={patchProduct.isPending}
                     onSave={(body) => patchProduct.mutateAsync({ id: p.id, body })}
                   />
@@ -819,7 +869,10 @@ export default function AdminPage() {
           <h3 className="reviews__title" style={{ marginTop: '1.75rem', fontSize: '1.05rem' }}>
             Upload product image
           </h3>
-          <p className="muted">JPEG, PNG, or WebP (about 2.5 MB max). Paths are stored as <code>/uploads/products/…</code>.</p>
+          <p className="muted">
+            Any common image type (JPEG, PNG, WebP, GIF, BMP, AVIF, SVG) up to about 2.5 MB. Paths are stored as{' '}
+            <code>/uploads/products/…</code>.
+          </p>
           <form
             className="filters"
             style={{ marginTop: '0.75rem', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'flex-end' }}
@@ -846,7 +899,7 @@ export default function AdminPage() {
             </label>
             <label className="filters__field">
               <span>Image file</span>
-              <input ref={uploadFileRef} type="file" accept="image/jpeg,image/png,image/webp" required />
+              <input ref={uploadFileRef} type="file" accept="image/*" required />
             </label>
             <label className="filters__field">
               <span>Set primary</span>
@@ -1204,10 +1257,14 @@ function CategoryRow({
 
 function ProductRow({
   product,
+  categories,
+  existingSlugs,
   onSave,
   saving,
 }: {
   product: AdminProduct
+  categories: AdminCategory[]
+  existingSlugs: string[]
   onSave: (body: Record<string, unknown>) => Promise<unknown>
   saving: boolean
 }) {
@@ -1218,6 +1275,7 @@ function ProductRow({
   const [avail, setAvail] = useState(product.availability_status)
   const [feat, setFeat] = useState(numActive(product.is_featured))
   const [trend, setTrend] = useState(numActive(product.is_trending))
+  const slugChoices = buildSlugChoices(name, existingSlugs, slug)
 
   return (
     <tr>
@@ -1226,10 +1284,23 @@ function ProductRow({
         <input value={name} onChange={(e) => setName(e.target.value)} />
       </td>
       <td>
-        <input value={slug} onChange={(e) => setSlug(e.target.value)} />
+        <select value={slug} onChange={(e) => setSlug(e.target.value)}>
+          <option value="">Select slug…</option>
+          {slugChoices.map((choice) => (
+            <option key={choice} value={choice}>
+              {choice}
+            </option>
+          ))}
+        </select>
       </td>
       <td style={{ maxWidth: '4rem' }}>
-        <input type="number" min={1} value={categoryId} onChange={(e) => setCategoryId(e.target.value)} />
+        <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+          {categories.map((c) => (
+            <option key={c.id} value={String(c.id)}>
+              {c.id} - {c.slug}
+            </option>
+          ))}
+        </select>
       </td>
       <td style={{ maxWidth: '5rem' }}>
         <input type="number" step="0.01" min={0} value={price} onChange={(e) => setPrice(e.target.value)} />

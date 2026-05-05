@@ -68,9 +68,11 @@ export default function ShellLayout() {
               Confirmer
             </Link>
           ) : null}
-          <Link to="/dev" className={location.pathname === '/dev' ? 'is-active' : ''}>
-            API dev
-          </Link>
+          {user?.role === 'admin' ? (
+            <Link to="/dev" className={location.pathname === '/dev' ? 'is-active' : ''}>
+              API dev
+            </Link>
+          ) : null}
           <span className="store__nav-divider" aria-hidden />
           <div className="theme-toggle" role="group" aria-label="Theme">
             {themeBtn('system', 'Auto')}

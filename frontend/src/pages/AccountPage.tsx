@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { apiFetch } from '../api'
+import { Link, useNavigate } from 'react-router-dom'
+import { apiFetch, apiPostCsrf, invalidateCsrf } from '../api'
 import { useAuth } from '../context/AuthContext'
+import { useToast } from '../context/ToastContext'
 import { qk } from '../lib/queryKeys'
 
 type ProductCard = {
@@ -16,8 +17,12 @@ type ProductCard = {
 type Tab = 'overview' | 'favorites'
 
 export default function AccountPage() {
-  const { user, loading } = useAuth()
+  const navigate = useNavigate()
+  const toast = useToast()
+  const { user, loading, refresh } = useAuth()
   const [tab, setTab] = useState<Tab>('overview')
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [logoutErr, setLogoutErr] = useState('')
 
   const favQuery = useQuery({
     queryKey: qk.favoritesList,
@@ -56,6 +61,25 @@ export default function AccountPage() {
 
   const favErr = favQuery.error instanceof Error ? favQuery.error.message : ''
   const items = favQuery.data?.items ?? []
+  const onLogout = async () => {
+    setLogoutErr('')
+    setIsLoggingOut(true)
+    try {
+      invalidateCsrf()
+      const body = await apiPostCsrf<{ logged_out: boolean }>('/auth/logout', {})
+      if (!body.ok) {
+        throw new Error(body.error?.message ?? 'Logout failed.')
+      }
+      invalidateCsrf()
+      await refresh()
+      toast.pushToast('Logged out.')
+      navigate('/dev')
+    } catch (e) {
+      setLogoutErr(e instanceof Error ? e.message : 'Logout failed.')
+    } finally {
+      setIsLoggingOut(false)
+    }
+  }
 
   return (
     <div className="page">
@@ -79,6 +103,7 @@ export default function AccountPage() {
         <div className="account-panel">
           <p className="muted">{user.email}</p>
           <p>Theme preference from profile: {user.theme_preference} (header toggle controls this device).</p>
+          {logoutErr ? <p className="banner banner--error">{logoutErr}</p> : null}
           <div className="pager" style={{ justifyContent: 'flex-start', marginTop: '1rem' }}>
             <Link className="btn" to="/orders">
               Your orders
@@ -86,6 +111,9 @@ export default function AccountPage() {
             <Link className="btn btn--ghost" to="/cart">
               Cart
             </Link>
+            <button type="button" className="btn btn--ghost" disabled={isLoggingOut} onClick={() => void onLogout()}>
+              {isLoggingOut ? 'Logging out…' : 'Logout'}
+            </button>
           </div>
         </div>
       ) : null}

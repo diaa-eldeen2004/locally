@@ -15,6 +15,7 @@ const ConfirmerPage = lazy(() => import('./pages/ConfirmerPage'))
 const DevPage = lazy(() => import('./pages/DevPage'))
 const OrderDetailPage = lazy(() => import('./pages/OrderDetailPage'))
 const OrdersPage = lazy(() => import('./pages/OrdersPage'))
+const VisaPaymentPage = lazy(() => import('./pages/VisaPaymentPage'))
 
 function Lazy({ children }: { children: ReactNode }) {
   return <Suspense fallback={<PageFallback />}>{children}</Suspense>
@@ -74,6 +75,14 @@ export default function App() {
             element={
               <Lazy>
                 <DevPage />
+              </Lazy>
+            }
+          />
+          <Route
+            path="/checkout/visa"
+            element={
+              <Lazy>
+                <VisaPaymentPage />
               </Lazy>
             }
           />
