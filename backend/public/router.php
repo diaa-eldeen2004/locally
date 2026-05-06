@@ -2,16 +2,34 @@
 
 declare(strict_types=1);
 
-/**
- * Router script for PHP built-in server so all non-file requests hit index.php.
- * Usage: php -S 127.0.0.1:8080 -t public public/router.php
- */
-if (PHP_SAPI_NAME() === 'cli-server') {
-    $uri = urldecode(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/');
-    $file = __DIR__ . $uri;
-    if ($uri !== '/' && is_file($file)) {
-        return false;
-    }
-}
+header('Content-Type: application/json');
 
-require __DIR__ . '/index.php';
+$uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+
+// remove /api prefix
+$route = str_replace('/api', '', $uri);
+
+// simple router
+switch ($route) {
+
+    case '':
+    case '/':
+        echo json_encode([
+            "message" => "API is working"
+        ]);
+        break;
+
+    case '/test':
+        echo json_encode([
+            "status" => "ok"
+        ]);
+        break;
+
+    default:
+        http_response_code(404);
+        echo json_encode([
+            "error" => "Route not found",
+            "path" => $route
+        ]);
+        break;
+}
