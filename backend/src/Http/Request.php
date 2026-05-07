@@ -24,6 +24,26 @@ final class Request
         $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
         $uri = $_SERVER['REQUEST_URI'] ?? '/';
         $path = parse_url($uri, PHP_URL_PATH) ?: '/';
+        $path = str_replace('\\', '/', (string) $path);
+
+        $scriptName = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+        $base = dirname($scriptName);
+        if ($base !== '/' && $base !== '.' && str_starts_with($path, $base . '/')) {
+            $path = substr($path, strlen($base)) ?: '/';
+        }
+
+        $pathInfo = $_SERVER['PATH_INFO'] ?? null;
+        if (
+            is_string($pathInfo)
+            && $pathInfo !== ''
+            && str_contains($path, '.php')
+        ) {
+            $pi = str_replace('\\', '/', $pathInfo);
+            if (str_starts_with($pi, '/api') || $pi === '/api') {
+                $path = $pi;
+            }
+        }
+
         if ($path !== '/' && str_ends_with($path, '/')) {
             $path = rtrim($path, '/') ?: '/';
         }

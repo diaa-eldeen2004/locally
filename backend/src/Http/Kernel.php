@@ -104,10 +104,53 @@ final class Kernel
                 503
             );
 
-            $router->post('/api/auth/register', static fn (Request $r): Response => $unavailable());
-            $router->post('/api/auth/login', static fn (Request $r): Response => $unavailable());
-            $router->get('/api/auth/me', static fn (Request $r): Response => $unavailable());
-            $router->get('/api/admin/ping', static fn (Request $r): Response => $unavailable());
+            $router->post('/api/auth/register', fn (Request $r): Response => $unavailable());
+            $router->post('/api/auth/login', fn (Request $r): Response => $unavailable());
+            $router->post('/api/auth/logout', fn (Request $r): Response => $unavailable());
+            $router->get('/api/auth/me', fn (Request $r): Response => $unavailable());
+            $router->get('/api/admin/ping', fn (Request $r): Response => $unavailable());
+            $router->get('/api/admin/summary', fn (Request $r): Response => $unavailable());
+            $router->get('/api/admin/orders', fn (Request $r): Response => $unavailable());
+            $router->get('/api/admin/analytics/summary', fn (Request $r): Response => $unavailable());
+            $router->get('/api/admin/users', fn (Request $r): Response => $unavailable());
+            $router->patchSlug('/api/admin/users', fn (Request $r, string $seg): Response => $unavailable());
+
+            $router->get('/api/admin/categories', fn (Request $r): Response => $unavailable());
+            $router->post('/api/admin/categories', fn (Request $r): Response => $unavailable());
+            $router->patchSlug('/api/admin/categories', fn (Request $r, string $seg): Response => $unavailable());
+
+            $router->get('/api/admin/products', fn (Request $r): Response => $unavailable());
+            $router->post('/api/admin/products', fn (Request $r): Response => $unavailable());
+            $router->patchSlug('/api/admin/products', fn (Request $r, string $seg): Response => $unavailable());
+            $router->post('/api/admin/product-images', fn (Request $r): Response => $unavailable());
+
+            $router->get('/api/admin/homepage/sections', fn (Request $r): Response => $unavailable());
+            $router->put('/api/admin/homepage/sections/reorder', fn (Request $r): Response => $unavailable());
+
+            $router->get('/api/catalog/categories', fn (Request $r): Response => $unavailable());
+            $router->get('/api/catalog/products', fn (Request $r): Response => $unavailable());
+            $router->getSlug('/api/catalog/products', fn (Request $r, string $slug): Response => $unavailable());
+            $router->get('/api/catalog/homepage', fn (Request $r): Response => $unavailable());
+
+            $router->post('/api/reviews', fn (Request $r): Response => $unavailable());
+            $router->post('/api/analytics/track', fn (Request $r): Response => $unavailable());
+
+            $router->get('/api/cart', fn (Request $r): Response => $unavailable());
+            $router->post('/api/cart/items', fn (Request $r): Response => $unavailable());
+            $router->delete('/api/cart/items', fn (Request $r): Response => $unavailable());
+
+            $router->get('/api/favorites', fn (Request $r): Response => $unavailable());
+            $router->post('/api/favorites', fn (Request $r): Response => $unavailable());
+            $router->delete('/api/favorites', fn (Request $r): Response => $unavailable());
+
+            $router->get('/api/orders', fn (Request $r): Response => $unavailable());
+            $router->post('/api/orders', fn (Request $r): Response => $unavailable());
+            $router->getSlug('/api/orders', fn (Request $r, string $seg): Response => $unavailable());
+
+            $router->get('/api/confirmer/orders', fn (Request $r): Response => $unavailable());
+            $router->getSlug('/api/confirmer/orders', fn (Request $r, string $seg): Response => $unavailable());
+            $router->post('/api/confirmer/orders/approve', fn (Request $r): Response => $unavailable());
+            $router->post('/api/confirmer/orders/reject', fn (Request $r): Response => $unavailable());
         } else {
             $users = new UserRepository($pdo);
             $carts = new CartRepository($pdo);
