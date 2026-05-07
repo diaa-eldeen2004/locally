@@ -31,6 +31,22 @@ export default function App() {
           <Route path="/product/:slug" element={<ProductPage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route
+            path="/login"
+            element={
+              <Lazy>
+                <DevPage />
+              </Lazy>
+            }
+          />
+          <Route
+            path="/signup"
+            element={
+              <Lazy>
+                <DevPage />
+              </Lazy>
+            }
+          />
+          <Route
             path="/account"
             element={
               <Lazy>

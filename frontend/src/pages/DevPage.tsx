@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import '../App.css'
 import { apiFetch, apiPostCsrf, getCsrf, invalidateCsrf } from '../api'
 import { useAuth } from '../context/AuthContext'
@@ -36,6 +37,7 @@ function formatDatabase(db: HealthData['database']): string {
 }
 
 export default function DevPage() {
+  const navigate = useNavigate()
   const { user: me, loading: authLoading, refresh } = useAuth()
   const [apiLine, setApiLine] = useState<string>('Checking API…')
   const [dbLine, setDbLine] = useState<string>('')
@@ -100,6 +102,14 @@ export default function DevPage() {
       invalidateCsrf()
       await refresh()
       await refreshCsrfPreview()
+      const role = String(body.data.user.role ?? '').toLowerCase()
+      if (role === 'admin') {
+        navigate('/admin')
+      } else if (role === 'confirmer') {
+        navigate('/confirmer')
+      } else {
+        navigate('/account')
+      }
     } else {
       setAuthMsg(body.error?.message ?? 'Login failed.')
     }

@@ -48,6 +48,14 @@ export default function ShellLayout() {
           <Link to="/cart" className={location.pathname === '/cart' ? 'is-active' : ''}>
             Cart
           </Link>
+          {!loading && !user ? (
+            <Link
+              to="/login"
+              className={location.pathname === '/login' || location.pathname === '/signup' ? 'is-active' : ''}
+            >
+              Login / Sign up
+            </Link>
+          ) : null}
           {!loading && user ? (
             <>
               <Link to="/account" className={location.pathname.startsWith('/account') ? 'is-active' : ''}>
