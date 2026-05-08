@@ -264,3 +264,123 @@ The dev server proxies `/api` to `http://127.0.0.1:8080`.
 | Dark/light, toasts, loading, transitions, empty/error states | 45, 48, 55–56 |
 | Performance (SQL, React, images, lazy) | 9, 49 |
 | Deliverables 1–10 | Entire plan |
+
+## Quick reference — How to run & MySQL setup
+
+This section is a single place to stand up **MySQL**, load **`database/schema.sql`** and optional **`database/seed.sql`**, configure **`backend/.env`**, and run **PHP** + **Vite**. Use it alongside the Phase 1 notes above if you need incremental **`database/migrations/`** scripts.
+
+### Prerequisites
+
+- **PHP** 8.2 or newer (`php -v`)
+- **Composer** optional (`composer dump-autoload` in `backend/`)
+- **Node.js** + npm for the frontend
+- **MySQL** 8+ or **MariaDB** 10.5+ with the server running locally
+
+On Windows, confirm the MySQL service is started (Services → MySQL / MariaDB, or your installer’s control panel). You need a superuser account (often `root`) that can create databases and users.
+
+### MySQL — create the database
+
+Connect with an administrative account (examples use `root`; adjust host/port if yours differ):
+
+```powershell
+mysql -h 127.0.0.1 -P 3306 -u root -p
+```
+
+In the MySQL prompt, create an empty database with UTF-8 support (matches the schema expectations):
+
+```sql
+CREATE DATABASE locally CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+Exit with `EXIT;` or `\q`.
+
+One-shot equivalent from PowerShell (repo root optional for this command):
+
+```powershell
+mysql -h 127.0.0.1 -P 3306 -u root -p -e "CREATE DATABASE IF NOT EXISTS locally CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+```
+
+### MySQL — create an application user and grant access
+
+Avoid using `root` from PHP. Create a dedicated user and grant it privileges **only** on the `locally` database.
+
+Replace `'your_secure_password'` with a strong password; it must match **`DB_PASSWORD`** in `backend/.env`.
+
+```sql
+CREATE USER 'locally'@'localhost' IDENTIFIED BY 'your_secure_password';
+GRANT ALL PRIVILEGES ON locally.* TO 'locally'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+Notes:
+
+- **`localhost`** — typical for dev when PHP and MySQL run on the same machine. If PHP connects via TCP explicitly, some setups use `'locally'@'127.0.0.1'` as a separate user; create both with the same password if you hit “access denied” quirks.
+- **`ALL PRIVILEGES ON locally.*`** — sufficient for this app’s migrations and runtime DDL expectations during development.
+
+### Import `schema.sql` (required)
+
+From the **repository root** (where the `database/` folder lives), load the canonical schema:
+
+```powershell
+mysql -h 127.0.0.1 -P 3306 -u locally -p locally < database/schema.sql
+```
+
+Use `-u root -p` instead if you prefer imports as admin; the app at runtime should still use the **`locally`** user via `.env`.
+
+### Import `seed.sql` (optional, recommended for dev)
+
+Demo roles, categories, sample products, and test accounts (**change passwords before any shared or production use**):
+
+```powershell
+mysql -h 127.0.0.1 -P 3306 -u locally -p locally < database/seed.sql
+```
+
+Seed includes accounts such as **`admin@locally.test`** / **`password`** and **`confirmer@locally.test`** / **`password`** (see Phase 4 table elsewhere in this README).
+
+### Backend configuration (`backend/.env`)
+
+```powershell
+cd backend
+copy .env.example .env
+```
+
+Edit **`backend/.env`** so database lines match your server and the user you created:
+
+| Variable | Typical local value |
+|----------|---------------------|
+| `DB_DRIVER` | `mysql` |
+| `DB_HOST` | `127.0.0.1` |
+| `DB_PORT` | `3306` |
+| `DB_NAME` | `locally` |
+| `DB_USER` | `locally` (or your chosen username) |
+| `DB_PASSWORD` | same as `IDENTIFIED BY` above |
+
+Also set **`APP_KEY`** to a long random string and, for local HTTP, keep **`SESSION_SECURE=0`**.
+
+Verify connectivity with **`GET /api/health`** after starting the backend (below); it reports whether the database is configured and connected.
+
+### Run the backend (PHP built-in server)
+
+```powershell
+cd backend\public
+php -S 127.0.0.1:8080 router.php
+```
+
+Health check: [http://127.0.0.1:8080/api/health](http://127.0.0.1:8080/api/health)
+
+### Run the frontend (Vite)
+
+In another terminal:
+
+```powershell
+cd frontend
+copy .env.example .env
+npm install
+npm run dev
+```
+
+The dev server proxies `/api` to `http://127.0.0.1:8080`, so keep the PHP server running while you use the storefront UI.
+
+### Existing databases — migrations
+
+If you already have `locally` from an older checkout, apply incremental SQL under **`database/migrations/`** as described in Phase 1 instead of re-importing the full `schema.sql`.
